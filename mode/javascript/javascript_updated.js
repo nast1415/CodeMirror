@@ -1,5 +1,6 @@
 // CodeMirror, copyright (c) by Marijn Haverbeke and others
 // Distributed under an MIT license: http://codemirror.net/LICENSE
+// Updated for university project SPBAU, MIT 2016 by Anastasia Starkova
 
 // TODO actually recognize syntax of TypeScript constructs
 
@@ -32,11 +33,12 @@ CodeMirror.defineMode("javascript", function(config, parserConfig) {
     function kw(type) {return {type: type, style: "keyword"};}
     var A = kw("keyword a"), B = kw("keyword b"), C = kw("keyword c");
     var operator = kw("operator"), atom = {type: "atom", style: "atom"};
+    var issue = {type: "issue", style: "issue"};
 
     var jsKeywords = {
       "if": kw("if"), "while": A, "with": A, "else": B, "do": B, "try": B, "finally": B,
       "return": C, "break": C, "continue": C, "new": kw("new"), "delete": C, "throw": C, "debugger": C,
-      "var": kw("var"), "const": kw("var"), "let": kw("var"),
+      "var": kw("var"), "issue": "issue", "const": kw("var"), "let": kw("var"),
       "function": kw("function"), "catch": kw("catch"),
       "for": kw("for"), "switch": kw("switch"), "case": kw("case"), "default": kw("default"),
       "in": operator, "typeof": operator, "instanceof": operator,
@@ -96,10 +98,12 @@ CodeMirror.defineMode("javascript", function(config, parserConfig) {
   // Used as scratch variables to communicate multiple values without
   // consing up tons of objects.
   var type, content;
+
   function ret(tp, style, cont) {
     type = tp; content = cont;
     return style;
   }
+
   function tokenBase(stream, state) {
     var ch = stream.next();
     if (ch == '"' || ch == "'") {
@@ -126,7 +130,7 @@ CodeMirror.defineMode("javascript", function(config, parserConfig) {
       stream.match(/^\d*(?:\.\d*)?(?:[eE][+\-]?\d+)?/);
       return ret("number", "number");
     } else if (ch == "/") {
-      if (stream.eat("*")) {
+        if (stream.eat("*")) {
         state.tokenize = tokenComment;
         return tokenComment(stream, state);
       } else if (stream.eat("/")) {
@@ -140,6 +144,8 @@ CodeMirror.defineMode("javascript", function(config, parserConfig) {
         stream.eatWhile(isOperatorChar);
         return ret("operator", "operator", stream.current());
       }
+    } else if ((ch == "i") && stream.eat("s") && stream.eat("s") && stream.eat("u") && stream.eat("e")) {
+      return ret("issue", "issue");  
     } else if (ch == "`") {
       state.tokenize = tokenQuasi;
       return tokenQuasi(stream, state);
@@ -233,7 +239,7 @@ CodeMirror.defineMode("javascript", function(config, parserConfig) {
 
   // Parser
 
-  var atomicTypes = {"atom": true, "number": true, "variable": true, "string": true, "regexp": true, "this": true, "jsonld-keyword": true};
+  var atomicTypes = {"atom": true, "number": true, "variable": true, "issue": true, "string": true, "regexp": true, "this": true, "jsonld-keyword": true};
 
   function JSLexical(indented, column, type, align, prev, info) {
     this.indented = indented;
@@ -291,6 +297,7 @@ CodeMirror.defineMode("javascript", function(config, parserConfig) {
       return false;
     }
     var state = cx.state;
+
     cx.marked = "def";
     if (state.context) {
       if (inList(state.localVars)) return;
@@ -363,6 +370,7 @@ CodeMirror.defineMode("javascript", function(config, parserConfig) {
     if (type == "default") return cont(expect(":"));
     if (type == "catch") return cont(pushlex("form"), pushcontext, expect("("), funarg, expect(")"),
                                      statement, poplex, popcontext);
+    if (type == "issue") return cont(pushlex("form"), className, poplex);
     if (type == "class") return cont(pushlex("form"), className, poplex);
     if (type == "export") return cont(pushlex("stat"), afterExport, poplex);
     if (type == "import") return cont(pushlex("stat"), afterImport, poplex);
@@ -520,7 +528,7 @@ CodeMirror.defineMode("javascript", function(config, parserConfig) {
     if (value == "=") return cont(expressionNoComma);
   }
   function typeexpr(type) {
-    if (type == "variable") {cx.marked = "variable-3"; return cont(afterType);}
+    if (type == "variable" || type == "issue") {cx.marked = "variable-3"; return cont(afterType);}
   }
   function afterType(type, value) {
     if (value == "<") return cont(commasep(typeexpr, ">"), afterType)

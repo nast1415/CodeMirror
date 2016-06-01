@@ -1,5 +1,6 @@
 // CodeMirror, copyright (c) by Marijn Haverbeke and others
 // Distributed under an MIT license: http://codemirror.net/LICENSE
+// Updated for university project SPBAU, MIT 2016 by Anastasia Starkova
 
 (function(mod) {
   if (typeof exports == "object" && typeof module == "object") // CommonJS
@@ -92,8 +93,9 @@
   var arrayProps = ("length concat join splice push pop shift unshift slice reverse sort indexOf " +
                     "lastIndexOf every some filter forEach map reduce reduceRight ").split(" ");
   var funcProps = "prototype apply call bind".split(" ");
+  var issueProps = "state type priority duplicates is_duplicated_by".split(" ");
   var javascriptKeywords = ("break case catch continue debugger default delete do else false finally for function " +
-                  "if in instanceof new null return switch throw true try typeof var void while with").split(" ");
+                  "if in instanceof issue new null return switch throw true try typeof var void while with").split(" ");
   var coffeescriptKeywords = ("and break catch class continue delete do else extends false finally for " +
                   "if in instanceof isnt new no not null of off on or return switch then throw true try typeof until void while with yes").split(" ");
 
@@ -103,7 +105,8 @@
       if (str.lastIndexOf(start, 0) == 0 && !arrayContains(found, str)) found.push(str);
     }
     function gatherCompletions(obj) {
-      if (typeof obj == "string") forEach(stringProps, maybeAdd);
+      if (obj == "issue") forEach(issueProps, maybeAdd);
+      else if (typeof obj == "string") forEach(stringProps, maybeAdd);
       else if (obj instanceof Array) forEach(arrayProps, maybeAdd);
       else if (obj instanceof Function) forEach(funcProps, maybeAdd);
       for (var name in obj) maybeAdd(name);
@@ -118,6 +121,8 @@
           base = options.additionalContext[obj.string];
         if (!options || options.useGlobalScope !== false)
           base = base || global[obj.string];
+      } else if (obj.type == "issue") {
+        base = "issue";
       } else if (obj.type == "string") {
         base = "";
       } else if (obj.type == "atom") {
